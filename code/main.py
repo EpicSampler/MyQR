@@ -8,8 +8,8 @@ from PyQt5.QtWidgets import QLabel
 from PyQt5.QtCore import Qt
 from ui import *
 from create_qr import *
-from print import *
 from print_window import *
+from donate import DonationDialog
 
 class MyApp(QMainWindow):  
     def __init__(self):
@@ -75,6 +75,7 @@ class MyApp(QMainWindow):
             self.ui.pushButton_4.clicked.connect(self.printer)
             self.ui.radioButton.clicked.connect(self.__upd_radio__)
             self.ui.radioButton_2.clicked.connect(self.__upd_radio__)
+            self.ui.action_7.triggered.connect(self.show_donation_dialog)
                 
             
         except Exception as e:
@@ -251,6 +252,11 @@ class MyApp(QMainWindow):
         #         self.ui.label.setText(glorbo[1])
         # except Exception as e:
         #     return self.show_error('Ошибка печати', str(e))
+    
+
+    def show_donation_dialog(self):
+        dialog = DonationDialog(self)
+        dialog.exec_()
 
 if __name__ == "__main__":
     try:
