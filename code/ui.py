@@ -176,7 +176,7 @@ class Ui_MainWindow(object):
         self.radioButton.setText(_translate("MainWindow", "Большой"))
         self.label_8.setText(_translate("MainWindow", "Меню редактирования стиля"))
         self.pushButton_4.setText(_translate("MainWindow", "Печать"))
-        self.label_9.setText(_translate("MainWindow", "vBeta-test"))
+        self.label_9.setText(_translate("MainWindow", "v1.0.0"))
         self.menu.setTitle(_translate("MainWindow", "Файл"))
         self.menu_2.setTitle(_translate("MainWindow", "Справка"))
         self.menu_3.setTitle(_translate("MainWindow", "Печать"))
