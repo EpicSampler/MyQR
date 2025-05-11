@@ -2,21 +2,23 @@ import sys
 import os
 import shutil
 import traceback
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QMessageBox, QAction)
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QMessageBox, QDialog)
 from PyQt5.QtGui import QPixmap, QIcon, QKeySequence
 from PyQt5.QtWidgets import QLabel
 from PyQt5.QtCore import Qt
 from ui import *
 from create_qr import *
 from print import *
+from print_window import *
 
 class MyApp(QMainWindow):  
     def __init__(self):
-        super().__init__() 
+        super().__init__()
         try:
             self.ui = Ui_MainWindow()
             self.ui.setupUi(self)  
             self.ui.label_2.setText('')
+
 
             self.is_image = None
             self.is_big = False
@@ -222,15 +224,33 @@ class MyApp(QMainWindow):
     
     def printer(self):
         try:
-            printer = ImagePrinter()
-            glorbo = printer.print_image('qrs/qr.png', scale_to_fit=False, dpi=1000)
-            print(glorbo)
-            if glorbo[0]:
-                self.ui.label.setText(glorbo[1])
-            if not glorbo[0]:
-                self.ui.label.setText(glorbo[1])
+            if not os.path.exists("qrs/qr.png"):
+                return self.show_error("Ошибка", "Сначала создайте QR-код")
+            
+            # Создаем и настраиваем редактор
+            editor = A4Editor(self)
+            editor.setWindowTitle("Печать QR-кода")
+            
+            # Загружаем изображение
+            if not editor.load_image("qrs/qr.png"):
+                return self.show_error("Ошибка", "Не удалось загрузить QR-код")
+            
+            # Показываем как модальное окно
+            if editor.exec_() == QDialog.Accepted:
+                self.ui.label.setText("✅ QR-код подготовлен к печати")
+            else:
+                self.ui.label.setText("Печать отменена")
+                
         except Exception as e:
-            return self.show_error('Ошибка печати', str(e))
+            return self.show_error("Ошибка печати", str(e))
+        #     glorbo = printer.print_image('qrs/qr.png', scale_to_fit=False, dpi=1000)
+        #     print(glorbo)
+        #     if glorbo[0]:
+        #         self.ui.label.setText(glorbo[1])
+        #     if not glorbo[0]:
+        #         self.ui.label.setText(glorbo[1])
+        # except Exception as e:
+        #     return self.show_error('Ошибка печати', str(e))
 
 if __name__ == "__main__":
     try:
@@ -243,3 +263,7 @@ if __name__ == "__main__":
         QMessageBox.critical(None, "Критическая ошибка", 
                            f"Приложение не может быть запущено:\n{str(e)}\n\n{traceback.format_exc()}")
         sys.exit(1)
+
+
+#Красивый QR код
+#DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDdDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD
