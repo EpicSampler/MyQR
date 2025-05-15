@@ -19,8 +19,11 @@ class MyApp(QMainWindow):
             self.ui.setupUi(self)  
             self.ui.label_2.setText('')
 
+            self.data = None
+
 
             self.is_image = None
+            self.choosed_data = None
             self.is_big = False
             self.current_file = "qrs/qr.png"
             self.scale = 20
@@ -61,7 +64,7 @@ class MyApp(QMainWindow):
             self.ui.action_2.triggered.connect(self.save_as)
             self.ui.action_2.setShortcut(QKeySequence("Ctrl+S"))
             self.ui.pushButton_2.clicked.connect(self.save_as)
-            self.ui.comboBox.currentIndexChanged.connect(self.__upd_label__)
+            self.ui.comboBox.currentIndexChanged.connect(self.__upd_list__)
             self.ui.pushButton.clicked.connect(self.make_qr)  # кнопка создать
             self.ui.pushButton_3.clicked.connect(self.set_style)  # кнопка установить стиль
             self.ui.spinBox.valueChanged.connect(self.__upd_spinboxes__)  # спинбокс масштаб
@@ -86,16 +89,67 @@ class MyApp(QMainWindow):
         radio_check_2 = self.ui.radioButton_2.isChecked()
         self.is_big = False if radio_check_1 and not radio_check_2 else True
     
-    def __upd_label__(self):
+    def __change_line_edit__(self, to_do: bool = False):
+        if to_do:
+            self.ui.lineEdit.hide()
+        else:
+            self.ui.lineEdit.show()
+
+    
+    def __upd_list__(self):
         try:
-            is_image_check = self.ui.comboBox.currentIndex()
-            if is_image_check == 0:
+            check = self.ui.comboBox.currentIndex()
+            if check == 0:
                 self.is_image = False
+                self.__change_line_edit__()
+                self.choosed_data = self.ui.comboBox.currentText()
+                self.data = self.ui.lineEdit.text()
+                print(self.choosed_data)
                 self.ui.labelText_or_ss.setText('Вставьте текст или ссылку')
-            elif is_image_check == 1:
+            elif check == 1:
                 self.is_image = True
+                self.__change_line_edit__()
+                self.choosed_data = self.ui.comboBox.currentText()
+                print(self.choosed_data)
                 self.ui.labelText_or_ss.setText('Вставьте расположение файла')
-                self.ui.labelText_or_ss.setFixedWidth(500)
+            elif check == 2:
+                self.is_image = False
+                self.__change_line_edit__(True)
+                self.choosed_data = self.ui.comboBox.currentText()
+                print(self.choosed_data)
+                self.ui.labelText_or_ss.setText('Введите адрес почты и тему письма')
+                mail = self.ui.lineEdit_4.text()
+                text = self.ui.lineEdit_5.text()
+                self.data = f'mailto:{mail}?body={text}&subject=Тема'
+                print(self.data)
+            elif check == 3:
+                self.is_image = False
+                self.__change_line_edit__()
+                self.choosed_data = self.ui.comboBox.currentText()
+                print(self.choosed_data)
+                self.ui.labelText_or_ss.setText('Введите географические координаты (Пример: 52.912193,33.470974)')
+                text = self.ui.lineEdit.text()
+                self.data = f'geo:{text}'
+            elif check == 4:
+                self.is_image = False
+                self.__change_line_edit__(True)
+                self.choosed_data = self.ui.comboBox.currentText()
+                print(self.choosed_data)
+                self.ui.labelText_or_ss.setText('Введите номер телефона и текст сообщения')
+                phone = self.ui.lineEdit_4.text()
+                text = self.ui.lineEdit_5.text()
+                self.data = f'smsto:{phone}?body={text}'
+                print(self.data)
+
+            elif check == 5:
+                self.is_image = False
+                self.__change_line_edit__()
+                self.choosed_data = self.ui.comboBox.currentText()
+                print(self.choosed_data)
+                self.ui.labelText_or_ss.setText('Введите номер телефона')
+                phone = self.ui.lineEdit.text()
+                self.data = f'tel:{phone}'
+                print(self.data)
             return [True, "Тип ввода обновлен"]
         except Exception as e:
             return self.show_error("Ошибка обновления метки", str(e))
@@ -118,15 +172,15 @@ class MyApp(QMainWindow):
 
     def make_qr(self):
         try:
-            data = self.ui.lineEdit.text()
-            if not data:
+            self.__upd_list__()
+            if not self.data:
                 return self.show_error("Ошибка", "Введите данные для QR-кода")
 
             if self.is_image:
-                if '\\' in data:
-                    data = data.replace('\\', '/')
+                if '\\' in self.data:
+                    data = self.data.replace('\\', '/')
             
-            result = create.make(data=data, is_image=self.is_image, size=self.is_big)
+            result = create.make(data=self.data, is_image=self.is_image, size=self.is_big)
             if not result[0]:
                 return result
             
@@ -244,15 +298,7 @@ class MyApp(QMainWindow):
                 
         except Exception as e:
             return self.show_error("Ошибка печати", str(e))
-        #     glorbo = printer.print_image('qrs/qr.png', scale_to_fit=False, dpi=1000)
-        #     print(glorbo)
-        #     if glorbo[0]:
-        #         self.ui.label.setText(glorbo[1])
-        #     if not glorbo[0]:
-        #         self.ui.label.setText(glorbo[1])
-        # except Exception as e:
-        #     return self.show_error('Ошибка печати', str(e))
-    
+
 
     def show_donation_dialog(self):
         dialog = DonationDialog(self)
@@ -273,3 +319,4 @@ if __name__ == "__main__":
 
 #Красивый QR код
 #DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDdDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD
+#Pochep 52.912193,33.470974
