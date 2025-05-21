@@ -15,6 +15,7 @@ class A4Editor(QDialog):
         self.image_item = None
         self.current_scale = 1.0
         self.current_rotation = 0
+        self.dpi = 300  # Разрешение для печати
         
         # Настройка графической сцены
         self.scene = QGraphicsScene()
@@ -24,8 +25,7 @@ class A4Editor(QDialog):
         
         # Настройка страницы А4
         self.page_size = QPageSize(QPageSize.A4)
-        self.page_rect = QRectF(0, 0, self.page_size.sizePixels(300).width(),
-                              self.page_size.sizePixels(300).height())
+        self.page_rect = self.calculate_page_rect()
         
         # Настройка инструментов
         self.setup_toolbar()
@@ -37,12 +37,20 @@ class A4Editor(QDialog):
         
         # Кнопки диалога
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons.setProperty("class", "close-button")
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
         
         self.setLayout(layout)
         self.init_scene()
+
+    def calculate_page_rect(self):
+        """Вычисление размеров страницы в пикселях"""
+        size_mm = self.page_size.size(QPageSize.Millimeter)
+        width_px = (size_mm.width() / 25.4) * self.dpi
+        height_px = (size_mm.height() / 25.4) * self.dpi
+        return QRectF(0, 0, width_px, height_px)
 
     def setup_toolbar(self):
         """Настройка панели инструментов"""
@@ -133,51 +141,48 @@ class A4Editor(QDialog):
         printer = QPrinter(QPrinter.HighResolution)
         printer.setPageSize(QPageSize(QPageSize.A4))
         printer.setFullPage(True)
+        printer.setResolution(self.dpi)  # Устанавливаем DPI
 
         print_dialog = QPrintDialog(printer, self)
         if print_dialog.exec_() == QPrintDialog.Accepted:
             painter = QPainter(printer)
             painter.setRenderHint(QPainter.Antialiasing)
+            painter.setRenderHint(QPainter.SmoothPixmapTransform)
 
-            # 1. Получаем оригинальный pixmap (без трансформаций)
+            # Получаем оригинальный pixmap
             original_pixmap = self.image_item.pixmap()
             
-            # 2. Получаем текущие трансформации
-            transform = self.image_item.transform()
+            # Получаем позицию и размеры изображения на сцене
+            scene_pos = self.image_item.pos()
+            scaled_width = original_pixmap.width() * self.current_scale
+            scaled_height = original_pixmap.height() * self.current_scale
             
-            # 3. Вычисляем реальные размеры после трансформаций
-            img_width = original_pixmap.width() * transform.m11()
-            img_height = original_pixmap.height() * transform.m22()
+            # Вычисляем соотношение между виртуальной страницей и реальной
+            page_rect = printer.pageRect(QPrinter.DevicePixel)
+            scale_x = page_rect.width() / self.page_rect.width()
+            scale_y = page_rect.height() / self.page_rect.height()
             
-            # 4. Вычисляем доступную область печати
-            page_rect = printer.pageRect()
-            margin = 20  # Отступ от краев в пикселях
-            printable_width = page_rect.width() - 2 * margin
-            printable_height = page_rect.height() - 2 * margin
+            # Масштабируем позицию и размеры
+            print_x = scene_pos.x() * scale_x
+            print_y = scene_pos.y() * scale_y
+            print_width = scaled_width * scale_x
+            print_height = scaled_height * scale_y
             
-            # 5. Автомасштабирование, чтобы влезло в страницу
-            scale = min(printable_width / img_width, printable_height / img_height)
-            scale = min(scale, 1.0)  # Не увеличиваем, только уменьшаем если не влезает
+            # Создаем целевую область для печати
+            target_rect = QRectF(print_x, print_y, print_width, print_height)
             
-            # 6. Вычисляем позицию с учетом расположения на виртуальной странице
-            virtual_pos = self.image_item.pos()
-            pos_ratio_x = virtual_pos.x() / self.page_rect.width()
-            pos_ratio_y = virtual_pos.y() / self.page_rect.height()
-            
-            target_x = margin + pos_ratio_x * (page_rect.width() - img_width * scale)
-            target_y = margin + pos_ratio_y * (page_rect.height() - img_height * scale)
-            
-            # 7. Создаем целевую область для печати
-            target_rect = QRectF(target_x, target_y, 
-                            img_width * scale, 
-                            img_height * scale)
-            
-            # 8. Печатаем с учетом всех трансформаций
+            # Рисуем изображение с учетом поворота
             painter.save()
             painter.translate(target_rect.center())
             painter.rotate(self.current_rotation)
-            painter.scale(scale, scale)
-            painter.translate(-original_pixmap.width()/2, -original_pixmap.height()/2)
+            painter.translate(-target_rect.width()/2, -target_rect.height()/2)
+            
+            # Масштабируем изображение
+            transform = QTransform()
+            transform.scale(self.current_scale * scale_x, self.current_scale * scale_y)
+            painter.setTransform(transform, True)
+            
+            # Рисуем оригинальное изображение
             painter.drawPixmap(0, 0, original_pixmap)
             painter.restore()
             
