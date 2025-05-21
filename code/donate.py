@@ -43,9 +43,11 @@ class DonationDialog(QDialog):
         
         cancel_button = QPushButton("Отмена")
         cancel_button.clicked.connect(self.reject)
+        cancel_button.setProperty("class", "close-button")
         buttons_layout.addWidget(cancel_button)
         
         ok_button = QPushButton("Перейти")
+        ok_button.setProperty("class", "close-button")
         ok_button.clicked.connect(self.open_donation_page)
         ok_button.setDefault(True)
         buttons_layout.addWidget(ok_button)
