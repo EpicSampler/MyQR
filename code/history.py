@@ -1,6 +1,5 @@
 # history.py
 import os
-import rsa
 import json
 from datetime import datetime
 from PyQt5.QtWidgets import (QMessageBox, QDialog, QVBoxLayout, QLabel, 
@@ -10,148 +9,108 @@ from PyQt5.QtGui import QCursor
 
 class HistoryManager:
     def __init__(self):
-        self.key_dir = "files/crypto_keys"
-        self.history_file = "files/history/history.bin"
-        self.style_file = "files/history/styles.json"
-        os.makedirs(self.key_dir, exist_ok=True)
+        self.history_file = "files/history/history.json"
         os.makedirs(os.path.dirname(self.history_file), exist_ok=True)
         
-        self.public_key, self.private_key = self._init_verified_keys()
-        print(f"Ключи инициализированы: Public - {bool(self.public_key)}, Private - {bool(self.private_key)}")
-
-    def _init_verified_keys(self):
-        """Инициализация ключей с проверкой"""
-        # ... (ваш существующий метод без изменений)
-        return self.public_key, self.private_key
-
     def add_record(self, data, style=None):
-        """Добавляет запись с данными и стилем"""
+        """Добавляет запись с данными и стилем в JSON"""
         try:
-            # Шифруем данные как раньше
-            data_bytes = data[:50].encode('utf-8')
-            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S").encode()
-            encrypted = rsa.encrypt(data_bytes, self.public_key)
+            record = {
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "data": data,
+                "style": style or {}
+            }
             
-            record = (
-                len(timestamp).to_bytes(2, 'big') +
-                timestamp +
-                len(encrypted).to_bytes(2, 'big') +
-                encrypted
-            )
+            history = self.get_records()
+            history.append(record)
             
-            with open(self.history_file, "ab") as f:
-                f.write(record)
-            
-            # Сохраняем стиль отдельно в JSON
-            if style:
-                styles = self._load_styles()
-                styles[timestamp.decode()] = style
-                with open(self.style_file, 'w') as f:
-                    json.dump(styles, f)
-            
+            with open(self.history_file, 'w') as f:
+                json.dump(history, f, indent=4)
             return True
         except Exception as e:
-            print(f"Ошибка при добавлении записи: {e}")
+            print(f"Ошибка добавления записи: {e}")
             return False
-
-    def _load_styles(self):
-        """Загружает стили из файла"""
+    
+    def get_records(self):
+        """Возвращает все записи из истории"""
         try:
-            if os.path.exists(self.style_file):
-                with open(self.style_file, 'r') as f:
+            if os.path.exists(self.history_file):
+                with open(self.history_file, 'r') as f:
                     return json.load(f)
         except Exception:
             pass
-        return {}
-
-    def get_records_with_styles(self):
-        """Возвращает записи с соответствующими стилями"""
-        records = self.get_records()  # Ваш существующий метод
-        styles = self._load_styles()
-        
-        result = []
-        for timestamp, data in records:
-            style = styles.get(timestamp, {})
-            result.append({
-                "timestamp": timestamp,
-                "data": data,
-                "style": style
-            })
-        return result
-
-    def get_records(self):
-        """Чтение записей из бинарного файла"""
-        if not self.private_key:
-            print("Ошибка: Нет приватного ключа")
-            return []
-
-        if not os.path.exists(self.history_file):
-            return []
-
-        records = []
-        try:
-            with open(self.history_file, "rb") as f:
-                while True:
-                    # Читаем длину метки времени
-                    len_ts_bytes = f.read(2)
-                    if not len_ts_bytes:
-                        break
-                    len_ts = int.from_bytes(len_ts_bytes, 'big')
-                    
-                    # Читаем метку времени
-                    timestamp = f.read(len_ts).decode('utf-8')
-                    
-                    # Читаем длину данных
-                    len_data_bytes = f.read(2)
-                    if not len_data_bytes:
-                        break
-                    len_data = int.from_bytes(len_data_bytes, 'big')
-                    
-                    # Читаем зашифрованные данные
-                    encrypted = f.read(len_data)
-                    if not encrypted:
-                        break
-                    
-                    # Дешифруем
-                    try:
-                        decrypted = rsa.decrypt(encrypted, self.private_key).decode('utf-8')
-                        records.append((timestamp, decrypted))
-                    except Exception as e:
-                        print(f"Ошибка дешифрования записи: {e}")
-                        continue
-                        
-        except Exception as e:
-            print(f"Ошибка чтения файла истории: {e}")
-
-        return records
+        return []
 
     def clear_history(self):
-        """Очищает файл истории"""
+        """Очищает историю"""
         try:
             if os.path.exists(self.history_file):
-                # Открываем файл в режиме записи с очисткой содержимого
-                with open(self.history_file, "wb") as f:
-                    f.truncate(0)
-                print("История успешно очищена")
-                return True
-            else:
-                print("Файл истории не существует, очистка не требуется")
+                os.remove(self.history_file)
                 return True
         except Exception as e:
-            print(f"Ошибка при очистке истории: {e}")
-            return False
+            print(f"Ошибка очистки истории: {e}")
+        return False
+
 
 class HistoryDialog(QDialog):
     itemClicked = pyqtSignal(dict)  # Сигнал при клике на элемент
     
     def __init__(self, parent, history_manager):
         super().__init__(parent)
+        self.parent = parent
         self.history = history_manager
         self.setup_ui()
         
     def setup_ui(self):
         self.setWindowTitle("История QR-кодов")
         self.setMinimumSize(500, 400)
+        
+        # Стили для диалога
+        self.setStyleSheet("""
+            QDialog {
+                background-color: #f8fafc;
+                font-family: 'Segoe UI', Arial, sans-serif;
+            }
+            .title-label {
+                font-size: 18px;
+                font-weight: bold;
+                color: #2d3748;
+                padding-bottom: 10px;
+                border-bottom: 1px solid #e2e8f0;
+            }
+            .history-item {
+                background-color: #ffffff;
+                border-radius: 8px;
+                border: 1px solid #e2e8f0;
+                margin: 5px;
+                padding: 10px;
+            }
+            .history-item:hover {
+                border: 1px solid #cbd5e1;
+                background-color: #f1f5f9;
+            }
+            .timestamp-label {
+                color: #4a5568;
+                font-weight: bold;
+                font-size: 13px;
+            }
+            .data-label {
+                color: #2d3748;
+                font-size: 14px;
+            }
+            .clear-button {
+                background-color: #fee2e2;
+                color: #b91c1c;
+                border-radius: 4px;
+                padding: 5px 10px;
+            }
+            .close-button {
+                background-color: #e0e7ff;
+                color: #4338ca;
+                border-radius: 4px;
+                padding: 5px 10px;
+            }
+        """)
         
         layout = QVBoxLayout()
         
@@ -194,7 +153,7 @@ class HistoryDialog(QDialog):
     
     def load_history(self):
         """Загружает историю и создает элементы"""
-        records = self.history.get_records_with_styles()
+        records = self.history.get_records()
         if not records:
             self.show_status_message("История пуста")
         else:
@@ -232,18 +191,20 @@ class HistoryDialog(QDialog):
     def show_status_message(self, message):
         """Показывает статусное сообщение"""
         status_label = QLabel(message)
-        status_label.setProperty("class", "status-message")
+        status_label.setStyleSheet("""
+            QLabel {
+                color: #64748b;
+                font-size: 14px;
+                font-style: italic;
+                padding: 20px;
+                text-align: center;
+            }
+        """)
         self.container_layout.addWidget(status_label)
     
     def clear_history(self):
         """Очищает историю"""
-        try:
-            if self.history.clear_history():
-                # Также очищаем стили
-                if os.path.exists(self.history.style_file):
-                    os.remove(self.history.style_file)
-                self.container_layout.clear()
-                self.show_status_message("История очищена")
-                QMessageBox.information(self, "Успех", "История успешно очищена")
-        except Exception as e:
-            QMessageBox.warning(self, "Ошибка", f"Не удалось очистить: {e}")
+        if self.history.clear_history():
+            self.container_layout.clear()
+            self.show_status_message("История очищена")
+            QMessageBox.information(self, "Успех", "История успешно очищена")

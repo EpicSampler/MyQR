@@ -451,7 +451,7 @@ class MyApp(QMainWindow):
             return self.show_error("Ошибка обновления метки", str(e))
     
     def show_history(self):
-        """Показывает окно истории и обрабатывает выбор"""
+        """Показывает окно истории"""
         dialog = HistoryDialog(self, self.history)
         dialog.itemClicked.connect(self.apply_history_item)
         dialog.exec_()
@@ -463,30 +463,28 @@ class MyApp(QMainWindow):
             self.ui.lineEdit.setText(item["data"])
             self.data = item["data"]
             
-            # Применяем стиль если есть
+            # Применяем сохраненный стиль
             if "style" in item:
                 style = item["style"]
-                if "scale" in style:
-                    self.ui.spinBox.setValue(style["scale"])
-                    self.scale = style["scale"]
-                if "borders" in style:
-                    self.ui.spinBox_2.setValue(style["borders"])
-                    self.borders = style["borders"]
-                if "bg_color" in style:
-                    self.ui.lineEdit_2.setText(style["bg_color"])
-                    self.bg_color = style["bg_color"]
-                if "color" in style:
-                    self.ui.lineEdit_3.setText(style["color"])
-                    self.color = style["color"]
-                if "is_big" in style:
-                    self.is_big = style["is_big"]
-                    self.ui.radioButton.setChecked(not self.is_big)
-                    self.ui.radioButton_2.setChecked(self.is_big)
-        except Exception as e:
-            self.show_error("Ошибка создания QR-кода", str(e))
+                self.ui.spinBox.setValue(style.get("scale", 20))
+                self.ui.spinBox_2.setValue(style.get("borders", 5))
+                self.ui.lineEdit_2.setText(style.get("bg_color", "Black"))
+                self.ui.lineEdit_3.setText(style.get("color", "White"))
+                self.ui.radioButton.setChecked(not style.get("is_big", False))
+                self.ui.radioButton_2.setChecked(style.get("is_big", False))
+                
+                # Обновляем внутренние переменные
+                self.scale = style.get("scale", 20)
+                self.borders = style.get("borders", 5)
+                self.bg_color = style.get("bg_color", "Black")
+                self.color = style.get("color", "White")
+                self.is_big = style.get("is_big", False)
             
             # Создаем QR-код
             self.make_qr()
+            
+        except Exception as e:
+            self.show_error("Ошибка применения истории", str(e))
 
     def __upd_spinboxes__(self):
         try:
@@ -546,14 +544,6 @@ class MyApp(QMainWindow):
             # 6. Убедитесь, что изображение устанавливается
             self.ui.label_2.setPixmap(pixmap)
             print("Изображение установлено в label_2")  # Отладочная строка
-
-
-            # Сброс параметров
-            self.ui.spinBox.setValue(20)
-            self.ui.lineEdit_2.setText('Black')
-            self.ui.lineEdit_3.setText('White')
-            self.ui.spinBox_2.setValue(5)
-            self.ui.radioButton_2.setChecked(self.is_big)
 
             style = {
                 "scale": self.scale,
