@@ -1,4 +1,4 @@
-# history.py
+
 import os
 import json
 from datetime import datetime
@@ -12,25 +12,18 @@ class HistoryManager:
         self.history_file = "files/history/history.json"
         os.makedirs(os.path.dirname(self.history_file), exist_ok=True)
         
-    def add_record(self, data, style=None):
-        """Добавляет или обновляет запись в истории"""
+    def add_record(self, data, style=None, type_=None):
+        """Добавляет запись в историю"""
         try:
-            new_record = {
+            record = {
                 "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 "data": data,
-                "style": style or {}
+                "style": style or {},
+                "type": type_
             }
             
             history = self.get_records()
-            
-            # Удаляем старые записи с такими же данными
-            history = [r for r in history if r["data"] != data]
-            
-            # Добавляем новую запись
-            history.append(new_record)
-            
-            # Сохраняем только последние 50 записей (чтобы история не разрасталась)
-            history = history[-50:]
+            history.append(record)
             
             with open(self.history_file, 'w') as f:
                 json.dump(history, f, indent=4)
@@ -55,19 +48,54 @@ class HistoryManager:
             if os.path.exists(self.history_file):
                 os.remove(self.history_file)
                 return True
+            return False
         except Exception as e:
             print(f"Ошибка очистки истории: {e}")
-        return False
+            return False
 
 
 class HistoryDialog(QDialog):
-    itemClicked = pyqtSignal(dict)  # Сигнал при клике на элемент
+    itemClicked = pyqtSignal(dict)
     
     def __init__(self, parent, history_manager):
         super().__init__(parent)
         self.parent = parent
         self.history = history_manager
         self.setup_ui()
+        self.itemClicked.connect(self.apply_history_item)
+    
+    def apply_history_item(self, item):
+        """Применяет данные и стиль из истории"""
+        try:
+            self.parent.is_restoring_from_history = True  # Устанавливаем флаг
+            
+            # Устанавливаем данные и стиль
+            self.parent.ui.lineEdit.setText(item["data"])
+            self.parent.data = item["data"]
+            
+            if "style" in item:
+                style = item["style"]
+                self.parent.ui.spinBox.setValue(style.get("scale", 20))
+                self.parent.ui.spinBox_2.setValue(style.get("borders", 5))
+                self.parent.ui.lineEdit_2.setText(style.get("bg_color", "Black"))
+                self.parent.ui.lineEdit_3.setText(style.get("color", "White"))
+                self.parent.ui.radioButton.setChecked(not style.get("is_big", False))
+                self.parent.ui.radioButton_2.setChecked(style.get("is_big", False))
+                
+                # Обновляем внутренние переменные
+                self.parent.scale = style.get("scale", 20)
+                self.parent.borders = style.get("borders", 5)
+                self.parent.bg_color = style.get("bg_color", "Black")
+                self.parent.color = style.get("color", "White")
+                self.parent.is_big = style.get("is_big", False)
+            
+            # Создаем QR-код
+            self.parent.make_qr()
+        
+        except Exception as e:
+            self.parent.show_error("Ошибка применения истории", str(e))
+        finally:
+            self.parent.is_restoring_from_history = False  # Сбрасываем флаг
         
     def setup_ui(self):
         self.setWindowTitle("История QR-кодов")
@@ -165,7 +193,7 @@ class HistoryDialog(QDialog):
         if not records:
             self.show_status_message("История пуста")
         else:
-            for item in reversed(records):  # Новые записи сверху
+            for item in reversed(records):
                 self.add_history_item(item)
     
     def add_history_item(self, item):
@@ -183,10 +211,17 @@ class HistoryDialog(QDialog):
         
         layout = QVBoxLayout()
         
-        time_label = QLabel(item["timestamp"])
+        # Отображаем timestamp
+        time_label = QLabel(item.get("timestamp", "Без даты"))
         time_label.setProperty("class", "timestamp-label")
         
-        data_label = QLabel(item["data"])
+        # Отображаем данные (преобразуем словарь в строку или берем конкретное поле)
+        data_text = item.get("data", "Нет данных")
+        if isinstance(data_text, dict):
+            # Если данные в формате словаря, преобразуем в строку или берем нужное поле
+            data_text = str(data_text)  # или data_text.get('text', 'Нет данных')
+        
+        data_label = QLabel(str(data_text))  # Преобразуем в строку на всякий случай
         data_label.setProperty("class", "data-label")
         data_label.setWordWrap(True)
         
@@ -212,9 +247,20 @@ class HistoryDialog(QDialog):
     
     def clear_history(self):
         """Очищает историю"""
-        if self.history.clear_history():
-            self.container_layout.clear()
-            manager = HistoryManager()
-            manager.clear_history()
-            self.show_status_message("История очищена")
-            QMessageBox.information(self, "Успех", "История успешно очищена")
+        try:
+            # Очищаем контейнер с элементами истории
+            while self.container_layout.count():
+                item = self.container_layout.takeAt(0)
+                widget = item.widget()
+                if widget:
+                    widget.deleteLater()
+            
+            # Очищаем файл истории через HistoryManager
+            if self.history.clear_history():
+                self.show_status_message("История очищена")
+                QMessageBox.information(self, "Успех", "История успешно очищена")
+            else:
+                QMessageBox.warning(self, "Ошибка", "Не удалось очистить историю")
+                
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Ошибка при очистке истории: {str(e)}")

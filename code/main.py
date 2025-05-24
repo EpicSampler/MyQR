@@ -1,3 +1,4 @@
+
 try:
     import sys
     import os
@@ -31,6 +32,7 @@ class MyApp(QMainWindow):
 
             self.data = None
             self.maked = False
+            self.is_restoring_from_history = False
             self.current_type = 0 
             self.is_image = None
             self.choosed_data = None
@@ -446,12 +448,20 @@ class MyApp(QMainWindow):
     def __prepare_data(self):
         """Подготавливает данные в зависимости от выбранного типа"""
         try:
+            self.data = None  # Сбрасываем предыдущие данные
+            
             if self.current_type == 0:  # Текст/ссылка
-                self.data = self.ui.lineEdit.text()
+                self.data = self.ui.lineEdit.text().strip()  # Берём текст из lineEdit
                 
             elif self.current_type == 1:  # Изображение
-                self.data = self.ui.lineEdit.text()
+                self.data = self.ui.lineEdit.text().strip()  # Путь к изображению
                 
+            elif self.current_type == 2:  # Email
+                mail = self.ui.lineEdit_4.text().strip()
+                text = self.ui.lineEdit_5.text().strip()
+                if mail and text:
+                    self.data = f'mailto:{mail}?body={text}&subject=Тема'
+
             elif self.current_type == 2:  # Email
                 mail = self.ui.lineEdit_4.text()
                 text = self.ui.lineEdit_5.text()
@@ -485,15 +495,15 @@ class MyApp(QMainWindow):
                 password = self.ui.lineEdit_5.text()
                 if ssid and password:
                     self.data = f'WIFI:T:WPA;S:{ssid};P:{password};;'
-                    
+                
             if not self.data:
                 return [False, "Введите данные для QR-кода"]
                 
             return [True, "Данные подготовлены"]
-            
+        
         except Exception as e:
-            return [False, f"Ошибка подготовки данных: {str(e)}"]            
-    
+            return [False, f"Ошибка подготовки данных: {str(e)}"]           
+        
     def show_history(self):
         """Показывает окно истории"""
         dialog = HistoryDialog(self, self.history)
@@ -531,24 +541,28 @@ class MyApp(QMainWindow):
             self.show_error("Ошибка применения истории", str(e))
 
     def make_qr(self):
-        """Создает QR-код с текущими параметрами стиля"""
+        """Создает QR-код и сохраняет в историю с текущими параметрами"""
         try:
+            # Пропускаем сохранение в историю если восстанавливаем из истории
+            if not self.is_restoring_from_history:
+                # Обновляем текущие параметры стиля из UI
+                self.scale = self.ui.spinBox.value()
+                self.borders = self.ui.spinBox_2.value()
+                self.bg_color = self.ui.lineEdit_2.text()
+                self.color = self.ui.lineEdit_3.text()
+                self.is_big = self.ui.radioButton_2.isChecked()
+                
             # Подготавливаем данные
-            result = self.__prepare_data()
-            if not result[0]:
-                return self.show_error("Ошибка", result[1])
+            self.__upd_list__()
+            prepare_result = self.__prepare_data()
             
-            # Применяем текущий стиль перед созданием
-            self.scale = self.current_style["scale"]
-            self.borders = self.current_style["borders"]
-            self.bg_color = self.current_style["bg_color"]
-            self.color = self.current_style["color"]
-            self.is_big = self.current_style["is_big"]
-            
-            # Создаем QR-код с текущим стилем
+            if not prepare_result[0]:
+                return prepare_result
+
+            # Создаем QR-код
             result = create.make(
-                data=self.data, 
-                is_image=self.is_image, 
+                data=self.data,
+                is_image=self.is_image,
                 size=self.is_big,
                 scale=self.scale,
                 border=self.borders,
@@ -572,14 +586,21 @@ class MyApp(QMainWindow):
             )
             self.ui.label_2.setPixmap(pixmap)
             
-            # Сохраняем в историю с текущим стилем и типом
-            record = {
-                "data": self.data,
-                "style": self.current_style.copy(),
-                "type": self.current_type
-            }
-            self.history.add_record(record)
-            
+            # Формируем параметры стиля для сохранения
+            if not self.is_restoring_from_history:
+                style = {
+                    "scale": self.scale,
+                    "borders": self.borders,
+                    "bg_color": self.bg_color,
+                    "color": self.color,
+                    "is_big": self.is_big
+                }
+                self.history.add_record(
+                    data=self.data,
+                    style=style,
+                    type_=self.current_type
+                )
+                
             self.maked = True
             return self.show_success("QR-код успешно создан")
             

@@ -13,15 +13,17 @@ class QR:
         self.qr = None
         self.drive_service = None
         self.last_error = None
+        self.current_data = None
+        self.current_is_image = False
 
     def _handle_error(self, error_msg, exception=None):
         """Обработка и сохранение ошибки"""
         if exception:
             error_msg += f"\n{str(exception)}\n{traceback.format_exc()}"
         self.last_error = error_msg
-        print(f"Ошибка: {error_msg}")  # Логирование в консоль
+        print(f"Ошибка: {error_msg}")
         return [False, error_msg]
-
+    
     def _authenticate_google_drive(self):
         """Аутентификация в Google Drive API"""
         try:
@@ -110,9 +112,12 @@ class QR:
         except Exception as e:
             return self._handle_error("Критическая ошибка при загрузке", e)
 
-    def make(self, size: bool, data: any, is_image=False):
-        """Создает QR-код с обработкой ошибок"""
-        self.data = data
+    def make(self, data: any, is_image=False, size=False, scale=20, border=5, 
+             background_color="Black", color="White"):
+        """Создает QR-код с возможностью задания стиля"""
+        self.current_data = data
+        self.current_is_image = is_image
+        
         try:
             # Проверка входных данных
             if not data:
@@ -132,15 +137,15 @@ class QR:
             else:
                 self.qr = make(content=data, micro=size)
 
-            # Сохранение QR-кода
+            # Сохранение с указанными параметрами стиля
             try:
                 os.makedirs("qrs", exist_ok=True)
                 self.qr.save(
                     'qrs/qr.png',
-                    scale=20,
-                    light='White',
-                    dark='Black',
-                    border=5
+                    scale=scale,
+                    light=color,
+                    dark=background_color,
+                    border=border
                 )
                 return [True, "QR-код успешно создан"]
             except Exception as e:
@@ -149,37 +154,27 @@ class QR:
         except Exception as e:
             return self._handle_error("Ошибка создания QR-кода", e)
 
-    def save_with_style(self, 
-                       background_color: str | tuple = (0, 0, 0),
-                       color: str | tuple = (255, 255, 255),
-                       size: bool = False,
-                       border: int | float = 3,
-                       scale: int | float = 20):
-        """Сохраняет QR-код с кастомными стилями"""
+    def save_with_style(self, background_color="Black", color="White", 
+                       size=None, border=5, scale=20):
+        """Применяет стиль к уже созданному QR-коду"""
         try:
             if not self.qr:
                 return self._handle_error("Сначала создайте QR-код")
 
-            # Проверка цветов
-            if not background_color or not color:
-                return self._handle_error("Не указаны цвета")
-
-            try:
-                self.qr = make(micro=size, content=self.data)
-                self.qr.save(
-                    'qrs/qr.png',
-                    scale=scale,
-                    light=color,
-                    dark=background_color,
-                    border=border
-                )
-                return [True, "Стиль QR-кода успешно применен"]
-            except Exception as e:
-                return self._handle_error("Ошибка сохранения стиля", e)
+            # Используем текущие данные для пересоздания QR-кода
+            return self.make(
+                data=self.current_data,
+                is_image=self.current_is_image,
+                size=size if size is not None else self.qr.micro,
+                scale=scale,
+                border=border,
+                background_color=background_color,
+                color=color
+            )
 
         except Exception as e:
             return self._handle_error("Ошибка применения стиля", e)
-
+        
     def get_last_error(self):
         """Возвращает последнее сообщение об ошибке"""
         return self.last_error
