@@ -3,14 +3,14 @@ try:
     import os
     import shutil
     import traceback
-    from ui import *
-    from create_qr import *
-    from print_window import *
+    from ui import Ui_MainWindow
+    from create_qr import QR
+    from print_window import A4Editor
     from donate import DonationDialog
     import resources
     import segno
     import rsa
-    from history import *
+    from history import HistoryManager, HistoryDialog
 
     # import sip
     # sip.setapi('QVariant', 2)
