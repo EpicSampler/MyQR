@@ -7,7 +7,6 @@ try:
     from create_qr import QR
     from print_window import A4Editor
     from donate import DonationDialog
-    import resources
     import segno
     import rsa
     from history import HistoryManager, HistoryDialog
