@@ -11,14 +11,9 @@ try:
     import rsa
     from history import HistoryManager, HistoryDialog
 
-    # import sip
-    # sip.setapi('QVariant', 2)
-    # sip.setapi('QString', 2)
-
     from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QMessageBox, QDialog)
     from PyQt5.QtGui import QPixmap, QIcon, QKeySequence
-    # from PyQt5.QtWidgets import QLabel
-    from PyQt5.QtCore import Qt #, QFile, QTextStream
+    from PyQt5.QtCore import Qt
     print("Все зависимости установлены")
 except ImportError as e:
     print(f"Ошибка: {e}. Установите: pip install")
@@ -33,11 +28,10 @@ class MyApp(QMainWindow):
             self.ui.label_2.setText('')
             
             self.history = HistoryManager()
-            # self.test_history_system()
 
             self.data = None
             self.maked = False
-
+            self.current_type = 0 
             self.is_image = None
             self.choosed_data = None
             self.is_big = False
@@ -46,6 +40,14 @@ class MyApp(QMainWindow):
             self.borders = 5
             self.bg_color = 'Black'
             self.color = 'White'
+
+            self.current_style = {
+            "scale": self.scale,
+            "borders": self.borders,
+            "bg_color": self.bg_color,
+            "color": self.color,
+            "is_big": self.is_big
+        }
 
             # Сброс параметров по умолчанию
             self.ui.spinBox.setValue(self.scale)
@@ -342,10 +344,29 @@ class MyApp(QMainWindow):
         except Exception as e:
             self.show_error("Ошибка подключения сигналов", str(e))
 
+    def __upd_spinboxes__(self):
+        """Обновляет параметры стиля при изменении спинбоксов"""
+        try:
+            self.current_style["scale"] = self.ui.spinBox.value()
+            self.current_style["borders"] = self.ui.spinBox_2.value()
+            return [True, "Параметры масштабирования обновлены"]
+        except Exception as e:
+            return self.show_error("Ошибка обновления спинбоксов", str(e))
+
+    def __upd_line_edits__(self):
+        """Обновляет параметры стиля при изменении цветов"""
+        try:
+            self.current_style["bg_color"] = self.ui.lineEdit_2.text()
+            self.current_style["color"] = self.ui.lineEdit_3.text()
+            return [True, "Цвета обновлены"]
+        except Exception as e:
+            return self.show_error("Ошибка обновления цветов", str(e))
+
     def __upd_radio__(self):
+        """Обновляет параметр размера при изменении радиокнопок"""
         radio_check_1 = self.ui.radioButton.isChecked()
         radio_check_2 = self.ui.radioButton_2.isChecked()
-        self.is_big = False if radio_check_1 and not radio_check_2 else True
+        self.current_style["is_big"] = not (radio_check_1 and not radio_check_2)
     
     def __change_line_edit__(self, to_do: bool = False):
         if to_do:
@@ -356,86 +377,59 @@ class MyApp(QMainWindow):
     
     def __upd_list__(self):
         try:
-            check = self.ui.comboBox.currentIndex()
-            if check == 0:
+            self.current_type = self.ui.comboBox.currentIndex()
+            
+            # Сбрасываем флаг maked перед обновлением данных
+            self.maked = False
+            
+            if self.current_type == 0:  # Текст/ссылка
                 self.is_image = False
                 self.__change_line_edit__()
                 self.choosed_data = self.ui.comboBox.currentText()
-                self.data = self.ui.lineEdit.text()
-                print(self.choosed_data)
                 self.ui.labelText_or_ss.setText('Вставьте текст или ссылку')
-            elif check == 1:
+                
+            elif self.current_type == 1:  # Изображение
                 self.is_image = True
                 self.__change_line_edit__()
                 self.choosed_data = self.ui.comboBox.currentText()
-                self.data = self.ui.lineEdit.text()
-                print(self.choosed_data)
                 self.ui.labelText_or_ss.setText('Вставьте расположение файла')
-            elif check == 2:
+                
+            elif self.current_type == 2:  # Email
                 self.is_image = False
                 self.__change_line_edit__(True)
                 self.choosed_data = self.ui.comboBox.currentText()
-                print(self.choosed_data)
                 self.ui.labelText_or_ss.setText('Введите адрес почты и тему письма')
-                mail = self.ui.lineEdit_4.text()
-                text = self.ui.lineEdit_5.text()
-                if self.maked and mail != '' and text != '':
-                    self.data = f'mailto:{mail}?body={text}&subject=Тема'
-                print(self.data)
-            elif check == 3:
+                
+            elif self.current_type == 3:  # SMS
                 self.is_image = False
                 self.__change_line_edit__(True)
                 self.choosed_data = self.ui.comboBox.currentText()
-                print(self.choosed_data)
                 self.ui.labelText_or_ss.setText('Введите номер телефона и текст сообщения')
-                phone = self.ui.lineEdit_4.text()
-                text = self.ui.lineEdit_5.text()
-                if self.maked and phone != '' and text != '':
-                    self.data = f'smsto:{phone}?body={text}'
-            elif check == 4:
+                
+            elif self.current_type == 4:  # Телефон
                 self.is_image = False
                 self.__change_line_edit__()
                 self.choosed_data = self.ui.comboBox.currentText()
-                print(self.choosed_data)
                 self.ui.labelText_or_ss.setText('Введите номер телефона')
-                phone = self.ui.lineEdit.text()
-                if self.maked and phone != '':
-                    self.data = f'tel:{phone}'
-                print(self.data)
-            elif check == 5:
+                
+            elif self.current_type == 5:  # Контакт
                 self.is_image = False
                 self.__change_line_edit__(True)
                 self.choosed_data = self.ui.comboBox.currentText()
-                print(self.choosed_data)
                 self.ui.labelText_or_ss.setText('Введите номер телефона и имя')
-                phone = self.ui.lineEdit_4.text()
-                name = self.ui.lineEdit_5.text()
-                if self.maked and phone != '' and name != '':
-                    self.data = f'BEGIN:VCARD\nVERSION:3.0\nN:{name};;;\nTEL:{phone}\nEND:VCARD'
-                print(self.data)
-            elif check == 6:
+                
+            elif self.current_type == 6:  # Геолокация
                 self.is_image = False
                 self.__change_line_edit__()
                 self.choosed_data = self.ui.comboBox.currentText()
-                print(self.choosed_data)
-                self.ui.labelText_or_ss.setText('Введите географические координаты (Пример: 52.912193,33.470974)')
-                text = self.ui.lineEdit.text()
-                if self.maked and text != '':
-                    self.data = f'geo:{text}'
-                print(self.data)
-            elif check == 7:
+                self.ui.labelText_or_ss.setText('Введите географические координаты')
+                
+            elif self.current_type == 7:  # WiFi
                 self.is_image = False
                 self.__change_line_edit__(True)
                 self.choosed_data = self.ui.comboBox.currentText()
-                print(self.choosed_data)
                 self.ui.labelText_or_ss.setText('Введите SSID сети и пароль')
-                Password = self.ui.lineEdit_5.text()
-                SSID = self.ui.lineEdit_4.text()
-                print(Password, ' - ', SSID)
-                if self.maked and Password != '' and SSID != '':
-                    self.data = f'WIFI:T:WPA;S:{SSID};P:{Password};;'
-                print(self.data)
-            # elif check == 8:
+            #elif check == 8:
             #     self.is_image = False
             #     self.__change_line_edit__(True)
             #     self.choosed_data = self.ui.comboBox.currentText()
@@ -444,11 +438,61 @@ class MyApp(QMainWindow):
             #     name = self.ui.lineEdit_4.text()
             #     if self.maked:
             #         self.data = f''
-            #     print(self.data)
-            
+            #     print(self.data)    
             return [True, "Тип ввода обновлен"]
         except Exception as e:
             return self.show_error("Ошибка обновления метки", str(e))
+
+    def __prepare_data(self):
+        """Подготавливает данные в зависимости от выбранного типа"""
+        try:
+            if self.current_type == 0:  # Текст/ссылка
+                self.data = self.ui.lineEdit.text()
+                
+            elif self.current_type == 1:  # Изображение
+                self.data = self.ui.lineEdit.text()
+                
+            elif self.current_type == 2:  # Email
+                mail = self.ui.lineEdit_4.text()
+                text = self.ui.lineEdit_5.text()
+                if mail and text:
+                    self.data = f'mailto:{mail}?body={text}&subject=Тема'
+                    
+            elif self.current_type == 3:  # SMS
+                phone = self.ui.lineEdit_4.text()
+                text = self.ui.lineEdit_5.text()
+                if phone and text:
+                    self.data = f'smsto:{phone}?body={text}'
+                    
+            elif self.current_type == 4:  # Телефон
+                phone = self.ui.lineEdit.text()
+                if phone:
+                    self.data = f'tel:{phone}'
+                    
+            elif self.current_type == 5:  # Контакт
+                phone = self.ui.lineEdit_4.text()
+                name = self.ui.lineEdit_5.text()
+                if phone and name:
+                    self.data = f'BEGIN:VCARD\nVERSION:3.0\nN:{name};;;\nTEL:{phone}\nEND:VCARD'
+                    
+            elif self.current_type == 6:  # Геолокация
+                text = self.ui.lineEdit.text()
+                if text:
+                    self.data = f'geo:{text}'
+                    
+            elif self.current_type == 7:  # WiFi
+                ssid = self.ui.lineEdit_4.text()
+                password = self.ui.lineEdit_5.text()
+                if ssid and password:
+                    self.data = f'WIFI:T:WPA;S:{ssid};P:{password};;'
+                    
+            if not self.data:
+                return [False, "Введите данные для QR-кода"]
+                
+            return [True, "Данные подготовлены"]
+            
+        except Exception as e:
+            return [False, f"Ошибка подготовки данных: {str(e)}"]            
     
     def show_history(self):
         """Показывает окно истории"""
@@ -486,104 +530,95 @@ class MyApp(QMainWindow):
         except Exception as e:
             self.show_error("Ошибка применения истории", str(e))
 
-    def __upd_spinboxes__(self):
-        try:
-            self.scale = self.ui.spinBox.value()
-            self.borders = self.ui.spinBox_2.value()
-            return [True, "Параметры масштабирования обновлены"]
-        except Exception as e:
-            return self.show_error("Ошибка обновления спинбоксов", str(e))
-
-    def __upd_line_edits__(self):
-        try:
-            self.bg_color = self.ui.lineEdit_2.text()
-            self.color = self.ui.lineEdit_3.text()
-            return [True, "Цвета обновлены"]
-        except Exception as e:
-            return self.show_error("Ошибка обновления цветов", str(e))
-
     def make_qr(self):
-        self.maked = True
+        """Создает QR-код с текущими параметрами стиля"""
         try:
-            self.__upd_list__()
-            if not self.data:
-                return self.show_error("Ошибка", "Введите данные для QR-кода")
-
-            # 1. Проверьте, что данные корректно передаются
-            print(f"Данные для QR: {self.data}")  # Добавьте эту строку для отладки
-
-            # 2. Проверьте работу create.make()
-            result = create.make(data=self.data, is_image=self.is_image, size=self.is_big)
+            # Подготавливаем данные
+            result = self.__prepare_data()
+            if not result[0]:
+                return self.show_error("Ошибка", result[1])
+            
+            # Применяем текущий стиль перед созданием
+            self.scale = self.current_style["scale"]
+            self.borders = self.current_style["borders"]
+            self.bg_color = self.current_style["bg_color"]
+            self.color = self.current_style["color"]
+            self.is_big = self.current_style["is_big"]
+            
+            # Создаем QR-код с текущим стилем
+            result = create.make(
+                data=self.data, 
+                is_image=self.is_image, 
+                size=self.is_big,
+                scale=self.scale,
+                border=self.borders,
+                background_color=self.bg_color,
+                color=self.color
+            )
+            
             if not result[0]:
                 return result
-            
-            # 3. Проверьте существование файла
-            print(f"Файл существует: {os.path.exists('qrs/qr.png')}")  # Отладочная строка
-            
-            if not os.path.exists("qrs/qr.png"):
-                return self.show_error("Ошибка", "QR-код не был создан")
 
-            # 4. Проверьте загрузку изображения
+            # Показываем QR-код
             pixmap = QPixmap("qrs/qr.png")
-            print(f"Изображение загружено: {not pixmap.isNull()}")  # Отладочная строка
-            self.history.add_record(self.data)
-            
             if pixmap.isNull():
                 return self.show_error("Ошибка", "Не удалось загрузить изображение QR-кода")
-
-            # 5. Проверьте размеры label_2
-            print(f"Размер label_2: {self.ui.label_2.width()}x{self.ui.label_2.height()}")  # Отладочная строка
-            
+                
             pixmap = pixmap.scaled(
                 self.ui.label_2.width(), 
                 self.ui.label_2.height(),
                 Qt.KeepAspectRatio,  
                 Qt.SmoothTransformation  
             )
-            
-            # 6. Убедитесь, что изображение устанавливается
             self.ui.label_2.setPixmap(pixmap)
-            print("Изображение установлено в label_2")  # Отладочная строка
-
-            style = {
-                "scale": self.scale,
-                "borders": self.borders,
-                "bg_color": self.bg_color,
-                "color": self.color,
-                "is_big": self.is_big
-            }
-            self.history.add_record(self.data, style)
             
-
-            self.maked = False
+            # Сохраняем в историю с текущим стилем и типом
+            record = {
+                "data": self.data,
+                "style": self.current_style.copy(),
+                "type": self.current_type
+            }
+            self.history.add_record(record)
+            
+            self.maked = True
             return self.show_success("QR-код успешно создан")
+            
         except Exception as e:
             return self.show_error("Ошибка создания QR-кода", str(e))
 
     def set_style(self):
+        """Применяет стиль к уже созданному QR-коду"""
         try:
             if not os.path.exists("qrs/qr.png"):
                 return self.show_error("Ошибка", "Сначала создайте QR-код")
 
+            # Обновляем текущий стиль из полей ввода
+            self.current_style = {
+                "scale": self.ui.spinBox.value(),
+                "borders": self.ui.spinBox_2.value(),
+                "bg_color": self.ui.lineEdit_2.text(),
+                "color": self.ui.lineEdit_3.text(),
+                "is_big": self.ui.radioButton_2.isChecked()
+            }
+
             result = create.save_with_style(
-                background_color=self.bg_color,
-                color=self.color,
-                border=self.borders,
-                scale=self.scale,
-                size=self.is_big
+                background_color=self.current_style["bg_color"],
+                color=self.current_style["color"],
+                border=self.current_style["borders"],
+                scale=self.current_style["scale"],
+                size=self.current_style["is_big"]
             )
+            
             if not result[0]:
                 return result
 
+            # Обновляем отображение
             pixmap = QPixmap("qrs/qr.png")
-            if pixmap.isNull():
-                return self.show_error("Ошибка", "Не удалось загрузить стилизованное изображение")
-
             pixmap = pixmap.scaled(
                 self.ui.label_2.width(), 
                 self.ui.label_2.height(),
                 Qt.KeepAspectRatio,  
-                Qt.SmoothTransformation 
+                Qt.SmoothTransformation  
             )
             self.ui.label_2.setPixmap(pixmap)
             

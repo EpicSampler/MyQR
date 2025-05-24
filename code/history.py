@@ -13,16 +13,24 @@ class HistoryManager:
         os.makedirs(os.path.dirname(self.history_file), exist_ok=True)
         
     def add_record(self, data, style=None):
-        """Добавляет запись с данными и стилем в JSON"""
+        """Добавляет или обновляет запись в истории"""
         try:
-            record = {
+            new_record = {
                 "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 "data": data,
                 "style": style or {}
             }
             
             history = self.get_records()
-            history.append(record)
+            
+            # Удаляем старые записи с такими же данными
+            history = [r for r in history if r["data"] != data]
+            
+            # Добавляем новую запись
+            history.append(new_record)
+            
+            # Сохраняем только последние 50 записей (чтобы история не разрасталась)
+            history = history[-50:]
             
             with open(self.history_file, 'w') as f:
                 json.dump(history, f, indent=4)
@@ -206,5 +214,7 @@ class HistoryDialog(QDialog):
         """Очищает историю"""
         if self.history.clear_history():
             self.container_layout.clear()
+            manager = HistoryManager()
+            manager.clear_history()
             self.show_status_message("История очищена")
             QMessageBox.information(self, "Успех", "История успешно очищена")
