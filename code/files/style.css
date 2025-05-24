@@ -1,0 +1,184 @@
+/* ===== Основные переменные ===== */
+:root {
+    --primary-green: #2E7D32;  /* Красивый глубокий зеленый */
+    --primary-light: #81C784;  /* Светло-зеленый */
+    --primary-dark: #1B5E20;   /* Темно-зеленый */
+    --accent-color: #FFC107;   /* Золотой акцент */
+    --text-dark: #212121;      /* Основной текст */
+    --text-light: #f5f5f5;     /* Текст на темном фоне */
+    --bg-color: #f8f9fa;       /* Фон приложения */
+    --card-bg: #ffffff;        /* Фон карточек */
+}
+
+/* ===== Глобальные стили ===== */
+QMainWindow, QDialog {
+    background-color: var(--bg-color);
+    font-family: 'Segoe UI', 'Roboto', sans-serif;
+    color: var(--text-dark);
+}
+
+/* ===== Кнопки ===== */
+QPushButton {
+    background-color: var(--primary-green);
+    color: var(--text-light);
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-weight: 500;
+    font-size: 14px;
+    min-width: 100px;
+    transition: background-color 0.3s;
+}
+
+QPushButton:hover {
+    background-color: var(--primary-dark);
+}
+
+QPushButton:pressed {
+    background-color: var(--primary-dark);
+    padding: 9px 19px;
+}
+
+QPushButton:disabled {
+    background-color: #e0e0e0;
+    color: #9e9e9e;
+}
+
+/* Акцентная кнопка */
+QPushButton.accent {
+    background-color: var(--accent-color);
+    color: var(--text-dark);
+}
+
+/* ===== Поля ввода ===== */
+QLineEdit, QTextEdit, QComboBox {
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 14px;
+    background-color: var(--card-bg);
+    /* selection-background-color: var(--primary-light); */
+}
+
+QLineEdit:focus, QTextEdit:focus {
+    border: 2px solid var(--primary-light);
+    padding: 7px 11px;
+}
+
+/* ===== Карточки ===== */
+QFrame.card {
+    background-color: var(--card-bg);
+    border-radius: 8px;
+    border: none;
+    padding: 16px;
+}
+
+QFrame.card QLabel {
+    font-size: 16px;
+    font-weight: 500;
+}
+
+/* ===== Тень для карточек ===== */
+QFrame.card {
+    background-color: white;
+    border-radius: 8px;
+    border: none;
+}
+
+QFrame.card {
+    background-color: white;
+    border-radius: 8px;
+}
+
+/* ===== Вкладки ===== */
+QTabWidget::pane {
+    border: none;
+    margin-top: 4px;
+}
+
+QTabBar::tab {
+    background: transparent;
+    padding: 8px 16px;
+    border-bottom: 3px solid transparent;
+    color: var(--text-dark);
+    font-weight: 500;
+}
+
+QTabBar::tab:selected {
+    border-bottom: 3px solid var(--primary-green);
+    color: var(--primary-dark);
+}
+
+QTabBar::tab:hover {
+    background-color: rgba(46, 125, 50, 0.1);
+}
+
+/* ===== Прогресс-бар ===== */
+QProgressBar {
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    text-align: center;
+    height: 12px;
+}
+
+QProgressBar::chunk {
+    background-color: var(--primary-green);
+    border-radius: 3px;
+}
+
+/* ===== CheckBox и RadioButton ===== */
+QCheckBox, QRadioButton {
+    /* qproperty-spacing: 8;  Расстояние между иконкой и текстом */
+    font-size: 14px;
+}
+
+QCheckBox::indicator, QRadioButton::indicator {
+    width: 18px;
+    height: 18px;
+    border: 2px solid #757575;
+    border-radius: 3px;
+}
+
+QCheckBox::indicator:checked {
+    background-color: var(--primary-green);
+    border-color: var(--primary-green);
+    /* icon: url(:/icons/check.svg);  /* Путь к SVG-иконке */
+} 
+
+/* ===== Списки и таблицы ===== */
+QListView, QTableView {
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    background-color: var(--card-bg);
+    /* alternate-background: #f5f5f5;  */
+    outline: 0;
+}
+
+/* Выделенный текст */
+QLineEdit, QTextEdit {
+    background: var(--primary-light);  /* Цвет выделения */
+    color: white;
+}
+
+/* ===== Специальные классы ===== */
+.title {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--primary-dark);
+}
+
+.subtitle {
+    font-size: 16px;
+    font-weight: 500;
+    color: #616161;
+}
+
+.error-text {
+    color: #d32f2f;
+    font-size: 13px;
+}
+
+/* ===== Анимации ===== */
+QPushButton, QCheckBox, QRadioButton {
+    transition: all 0.3s ease;
+}

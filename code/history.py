@@ -30,7 +30,7 @@ class HistoryManager:
                     priv_key = rsa.PrivateKey.load_pkcs1(f.read())
                 
                 # Тест шифрования/дешифрования
-                test_data = b"test_123"
+                test_data = b"testic Z ytlfdyj egfk yj ybxtuj yt ckjvfk blablabla 11920391392"
                 encrypted = rsa.encrypt(test_data, pub_key)
                 decrypted = rsa.decrypt(encrypted, priv_key)
                 
