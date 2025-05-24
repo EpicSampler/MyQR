@@ -451,8 +451,42 @@ class MyApp(QMainWindow):
             return self.show_error("Ошибка обновления метки", str(e))
     
     def show_history(self):
-        """Показывает окно истории"""
-        HistoryDialog(self, self.history).exec_()
+        """Показывает окно истории и обрабатывает выбор"""
+        dialog = HistoryDialog(self, self.history)
+        dialog.itemClicked.connect(self.apply_history_item)
+        dialog.exec_()
+    
+    def apply_history_item(self, item):
+        """Применяет данные и стиль из истории"""
+        try:
+            # Устанавливаем данные
+            self.ui.lineEdit.setText(item["data"])
+            self.data = item["data"]
+            
+            # Применяем стиль если есть
+            if "style" in item:
+                style = item["style"]
+                if "scale" in style:
+                    self.ui.spinBox.setValue(style["scale"])
+                    self.scale = style["scale"]
+                if "borders" in style:
+                    self.ui.spinBox_2.setValue(style["borders"])
+                    self.borders = style["borders"]
+                if "bg_color" in style:
+                    self.ui.lineEdit_2.setText(style["bg_color"])
+                    self.bg_color = style["bg_color"]
+                if "color" in style:
+                    self.ui.lineEdit_3.setText(style["color"])
+                    self.color = style["color"]
+                if "is_big" in style:
+                    self.is_big = style["is_big"]
+                    self.ui.radioButton.setChecked(not self.is_big)
+                    self.ui.radioButton_2.setChecked(self.is_big)
+        except Exception as e:
+            self.show_error("Ошибка создания QR-кода", str(e))
+            
+            # Создаем QR-код
+            self.make_qr()
 
     def __upd_spinboxes__(self):
         try:
@@ -520,6 +554,16 @@ class MyApp(QMainWindow):
             self.ui.lineEdit_3.setText('White')
             self.ui.spinBox_2.setValue(5)
             self.ui.radioButton_2.setChecked(self.is_big)
+
+            style = {
+                "scale": self.scale,
+                "borders": self.borders,
+                "bg_color": self.bg_color,
+                "color": self.color,
+                "is_big": self.is_big
+            }
+            self.history.add_record(self.data, style)
+            
 
             self.maked = False
             return self.show_success("QR-код успешно создан")
