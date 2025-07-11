@@ -11,6 +11,7 @@ try:
     import segno
     import rsa
     from history import HistoryManager, HistoryDialog
+    from pack_create import PackGenerate
 
     from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QMessageBox, QDialog)
     from PyQt5.QtGui import QPixmap, QIcon, QKeySequence
@@ -341,6 +342,7 @@ class MyApp(QMainWindow):
             self.ui.radioButton_2.clicked.connect(self.__upd_radio__)
             self.ui.action_7.triggered.connect(self.show_donation_dialog)
             self.ui.action_8.triggered.connect(self.show_history)
+            self.ui.action_9.triggered.connect(self.pack_generate)
                 
             
         except Exception as e:
@@ -682,6 +684,10 @@ class MyApp(QMainWindow):
         except Exception as e:
             self.ui.label.setText('❌Не удалось сохранить файл')
             return self.show_error("Ошибка при сохранении", str(e))
+    
+    def pack_generate(self):
+        dialog = PackGenerate(self)
+        dialog.exec_()
     
     def printer(self):
         try:
