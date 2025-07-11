@@ -48,14 +48,14 @@ class PackGenerate(QDialog):
         main_layout.addWidget(style_label)
         
         color_layout = QHBoxLayout()
-        color_layout.addWidget(QLabel("Цвет:"))
-        self.color_input = QLineEdit("Black")
-        self.color_input.setPlaceholderText("Black")
+        color_layout.addWidget(QLabel("Фон:"))
+        self.color_input = QLineEdit("White")
+        self.color_input.setPlaceholderText("White")
         color_layout.addWidget(self.color_input)
         
-        color_layout.addWidget(QLabel("Фон:"))
-        self.bg_color_input = QLineEdit("White")
-        self.bg_color_input.setPlaceholderText("White")
+        color_layout.addWidget(QLabel("Цвет:"))
+        self.bg_color_input = QLineEdit("Black")
+        self.bg_color_input.setPlaceholderText("Black")
         color_layout.addWidget(self.bg_color_input)
         
         main_layout.addLayout(color_layout)
